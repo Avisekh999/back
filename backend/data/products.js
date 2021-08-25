@@ -6824,7 +6824,7 @@ description: "Foog chal raha hai",
     description: "Eat healthy",
     brand:"Fortune",
     category: "60d184e192207a1a70f84489",
-    price: "110",//
+    price: "110",
     countstock:"10",
     rating: "4.5",
     numReviews: "15"

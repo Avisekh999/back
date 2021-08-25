@@ -6,6 +6,6 @@ import {
 } from "../controllers/mailControllers.js";
 
 
-router.route("/").post(mailUser)
+router.route("/:id").post(mailUser)
 
 export default router;

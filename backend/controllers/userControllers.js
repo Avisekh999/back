@@ -1,6 +1,8 @@
 import User from "../models/userModel.js";
 import asyncHandler from "express-async-handler";
 import generateToken from "../utils/generateToken.js";
+import sendEmail from '../utils/sendEmail.js';
+import crypto from 'crypto'
 
 //@desc Auth user & get token
 //@route POST /api/users/login
@@ -80,7 +82,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 //@ccess PUBLIC
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, number, password } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -92,6 +94,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const user = await User.create({
     name,
     email,
+    number,
     password,
   });
 
@@ -100,6 +103,7 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      number: user.number,
       isAdmin: user.isAdmin,
       token: generateToken(user._id),
     });
@@ -176,6 +180,96 @@ const updateUser = asyncHandler(async (req, res) => {
     }
   });
 
+
+// FORGET Password Handler
+const forgotPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  console.log(req.body.email)
+
+  if (!user) {
+    console.log('== No user FOUND ==')
+    return res.status(200).json({
+      success: false,
+      data: `User not found with that email`,
+    });
+  }
+
+  // Get reset token
+  const resetToken = user.getResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+  console.log(resetToken)
+
+  // Create reset url
+  const resetUrl = `https://kundustores.com/reset-password/${resetToken}`;
+
+  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please click the below link create new password: \n\n ${resetUrl}`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Password reset token',
+      message,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: `Email sent to ${user.email}`,
+    });
+  } catch (err) {
+    console.log(err);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save({
+      validateBeforeSave: false,
+    });
+
+    return res.status(200).json({
+      success: false,
+      data: `Email could not be send!`,
+    });
+  }
+});
+
+
+// RESET Password Handler
+const resetPassword = asyncHandler(async (req, res, next) => {
+  console.log(req.body.password, req.params.resettoken)
+  // Get hashed token
+  const resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(req.params.resettoken)
+    .digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  console.log("USER: ", user)
+
+  if (!user) {
+    console.log('== USER chaina hai ==')
+    return res.status(200).json({
+      success: false,
+      msg: 'Invalid Token',
+    });
+  }
+
+  // Set new password
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  // Create token
+  // const token = user.getSignedJwtToken();
+
+  return res.status(statusCode).json({
+    success: true
+  });
+});
+
 export {
   authUser,
   getUserProfile,
@@ -185,4 +279,6 @@ export {
   deleteUser,
   getUserById,
   updateUser,
+  forgotPassword,
+  resetPassword
 };

@@ -10,7 +10,7 @@ dotenv.config();
 
 const key_id = "rzp_test_t4ALCGOgK9QUYP";
 const key_secret = "jMNsnPnjUqWoMPcUOloU4M83";
-const instance = new Razorpay({
+const instance = new Razorpay({ // Instantiate Razorpay
   key_id,
   key_secret,
 });
@@ -123,7 +123,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
 // @access Private Admin
 
 const getOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({}).populate("user", "id name");
+  const orders = await Order.find({}).populate("user", "id name").sort('-createdAt');
   res.json(orders);
 });
 
@@ -159,9 +159,9 @@ const paymentOrder = asyncHandler(async (req, res) => {
 const verifyPayment =asyncHandler(async (req, res) => {
   //do a validation
   const secret = "1234";
-  // const requestedBody = JSON.stringify(req.body)
+  const requestedBody = JSON.stringify(req.body)
+  console.log("RequestedBody: ",requestedBody);
 
-  // console.log(requestedBody)
   // const shasum = crypto.createHmac("sha256", secret).update(requestedBody).digest('hex');
 
   //   console.log(shasum, req.headers['x-razorpay-signature'])
@@ -182,8 +182,8 @@ const verifyPayment =asyncHandler(async (req, res) => {
     .digest("hex");
 
   // Compare the signatures
-  console.log(expectedSignature)
-  console.log(req.headers['x-razorpay-signature'] )
+  console.log("Expected Signature: ",expectedSignature)
+  console.log("Razorpay Signature: ",req.headers['x-razorpay-signature'] )
   if (expectedSignature.length ===  req.headers['x-razorpay-signature'].length) {
     // if same, then find the previosuly stored record using orderId,
     // and update paymentId and signature, and set status to paid.
